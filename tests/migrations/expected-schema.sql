@@ -696,3 +696,18 @@ CREATE INDEX idx_media_attachments_post_id ON public.media_attachments USING btr
 CREATE INDEX idx_media_attachments_content_hash ON public.media_attachments USING btree (content_hash);
 ALTER TABLE ONLY public.media_attachments
     ADD CONSTRAINT media_attachments_post_id_fkey FOREIGN KEY (post_id) REFERENCES public.posts(id) ON DELETE CASCADE NOT VALID;
+CREATE TABLE public.notifications (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    recipient text NOT NULL,
+    type text NOT NULL,
+    message text NOT NULL,
+    link_href text,
+    read boolean DEFAULT false NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE ONLY public.notifications
+    ADD CONSTRAINT notifications_pkey PRIMARY KEY (id);
+
+CREATE INDEX idx_notifications_recipient ON public.notifications USING btree (recipient);
+CREATE INDEX idx_notifications_read ON public.notifications USING btree (read);
