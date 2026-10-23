@@ -283,3 +283,69 @@ export class AttestationCache<V> {
     this.insertAtFront(node);
   }
 }
+// ── Attestation Signing & Caching Logic ─────────────────────────────────────
+
+import { createHash, sign, KeyObject } from "node:crypto";
+
+export interface SignedCreatorMetrics {
+  metrics: any;
+  windowStart: string;
+  windowEnd: string;
+  timestamp: number;
+  signature: string;
+  signerPublicKey: string;
+}
+
+/**
+ * Singleton cache instance configured with the required 1-hour TTL.
+ */
+export const oracleAttestationCache = new AttestationCache<SignedCreatorMetrics>({
+  maxSize: 10000,
+  ttlMs: 3_600_000, // 1 hour
+});
+
+/**
+ * Computes, signs, and caches creator metrics.
+ */
+export function attestCreatorMetrics(
+  metrics: any,
+  privateKey: KeyObject,
+  publicKeyHex: string,
+  windowStart: bigint,
+  windowEnd: bigint
+): SignedCreatorMetrics {
+  // Clear old window from cache
+  oracleAttestationCache.beginWindow(windowStart, windowEnd);
+
+  const timestamp = Date.now();
+  const payloadToSign = JSON.stringify({
+    metrics,
+    windowStart: windowStart.toString(),
+    windowEnd: windowEnd.toString(),
+    timestamp,
+  });
+
+  const hash = createHash("sha256").update(payloadToSign).digest();
+  const signature = sign(null, hash, privateKey).toString("hex");
+
+  const attestation: SignedCreatorMetrics = {
+    metrics,
+    windowStart: windowStart.toString(),
+    windowEnd: windowEnd.toString(),
+    timestamp,
+    signature,
+    signerPublicKey: publicKeyHex,
+  };
+
+  // Cache it using the window start as the key
+  oracleAttestationCache.set(`window:${windowStart}`, attestation);
+
+  return attestation;
+}
+
+/**
+ * Retrieves a cached, signed attestation for a given window.
+ */
+export function getCachedAttestation(windowStart: bigint): SignedCreatorMetrics | undefined {
+  return oracleAttestationCache.get(`window:${windowStart}`);
+}
