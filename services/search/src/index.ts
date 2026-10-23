@@ -153,20 +153,9 @@ app.get("/search", async (req: Request, res: Response) => {
   } catch (_err) {
     res.status(500).json({ error: "search query failed" });
   }
-});
-
-// ── Start server ───────────────────────────────────────────────────────────
-const server = app.listen(PORT, () => {
-  console.log(`[search] listening on port ${PORT}`);
-});
-
-// Graceful shutdown
-function shutdown() {
-  server.close(() => process.exit(0));
-  setTimeout(() => process.exit(1), 10_000).unref();
 }
 
-process.on("SIGTERM", shutdown);
-process.on("SIGINT", shutdown);
+process.on("SIGTERM", (signal) => void shutdown(signal));
+process.on("SIGINT", (signal) => void shutdown(signal));
 
-export default app;
+export { app };

@@ -44,6 +44,10 @@ app.get("/health/ready", (_req: Request, res: Response) => {
 });
 
 const PORT = parseInt(process.env["PORT"] ?? "3002", 10);
+const database = process.env["DATABASE_URL"] ? new Pool({ connectionString: process.env["DATABASE_URL"] }) : undefined;
+const redis = process.env["REDIS_URL"]
+  ? new Redis(process.env["REDIS_URL"], { maxRetriesPerRequest: 1, retryStrategy: () => null })
+  : undefined;
 
 const server = app.listen(PORT, () => {
   logger.info({ port: PORT }, "notification service listening");
@@ -64,7 +68,7 @@ function shutdown() {
   setTimeout(() => process.exit(1), 30_000).unref();
 }
 
-process.on("SIGTERM", shutdown);
-process.on("SIGINT", shutdown);
+process.on("SIGTERM", (signal) => shutdown(signal));
+process.on("SIGINT", (signal) => shutdown(signal));
 
 export { app };
